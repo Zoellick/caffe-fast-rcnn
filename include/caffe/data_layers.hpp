@@ -290,6 +290,35 @@ class MemoryDataLayer : public BaseDataLayer<Dtype> {
 };
 
 /**
+ * @brief Provides rois to the ROIPoolingLayer from memory.
+ */
+template <class Dtype>
+class MemoryROILayer: public BaseDataLayer<Dtype> {
+ public:
+  explicit MemoryROILayer(const LayerParameter& param)
+      : BaseDataLayer<Dtype>(param) {}
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "MemoryROI"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+  virtual void AddROIsWithLevels(const vector<int>& levels, 
+      const vector<vector<vector<int> > >& rois_by_lvl);
+  virtual void AddROIsSingleLevel(const vector<vector<int> >& rois);
+
+  size_t num_rois() { return num_rois_; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  size_t num_rois_;
+  Dtype* rois_;
+};
+
+/**
  * @brief Provides data to the Net from windows of images files, specified
  *        by a window data file.
  *
