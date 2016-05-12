@@ -14,6 +14,7 @@
 #include "caffe/filler.hpp"
 #include "caffe/internal_thread.hpp"
 #include "caffe/layer.hpp"
+#include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/db.hpp"
 
@@ -28,6 +29,7 @@ template <typename Dtype>
 class BaseDataLayer : public Layer<Dtype> {
  public:
   explicit BaseDataLayer(const LayerParameter& param);
+  virtual ~BaseDataLayer() {}
   // LayerSetUp: implements common data layer setup functionality, and calls
   // DataLayerSetUp to do special data layer setup for individual layer types.
   // This method may not be overridden except by the BasePrefetchingDataLayer.
@@ -56,6 +58,7 @@ class BasePrefetchingDataLayer :
  public:
   explicit BasePrefetchingDataLayer(const LayerParameter& param)
       : BaseDataLayer<Dtype>(param) {}
+  virtual ~BasePrefetchingDataLayer() {}
   // LayerSetUp: implements common data layer setup functionality, and calls
   // DataLayerSetUp to do special data layer setup for individual layer types.
   // This method may not be overridden.
@@ -284,6 +287,35 @@ class MemoryDataLayer : public BaseDataLayer<Dtype> {
   Blob<Dtype> added_data_;
   Blob<Dtype> added_label_;
   bool has_new_data_;
+};
+
+/**
+ * @brief Provides rois to the ROIPoolingLayer from memory.
+ */
+template <class Dtype>
+class MemoryROILayer: public BaseDataLayer<Dtype> {
+ public:
+  explicit MemoryROILayer(const LayerParameter& param)
+      : BaseDataLayer<Dtype>(param) {}
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "MemoryROI"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+  virtual void AddROIsWithLevels(const vector<int>& levels, 
+      const vector<vector<vector<int> > >& rois_by_lvl);
+  virtual void AddROIsSingleLevel(const vector<vector<int> >& rois);
+
+  size_t num_rois() { return num_rois_; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  size_t num_rois_;
+  Dtype* rois_;
 };
 
 /**
